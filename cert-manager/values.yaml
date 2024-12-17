@@ -1,0 +1,32 @@
+# Enable/disable ClusterIssuer
+clusterIssuer:
+  enabled: false
+  name: letsencrypt-prod-gateway
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: barca105@naver.com
+    privateKeySecretName: letsencrypt-prod
+    ingressClass: nginx
+
+internalCaIssuer:
+  enabled: true
+  name: internal-ca-issuer
+  namespace: cert-manager
+  spec:
+    isCA: true
+    duration: 8760h
+    renewBefore: 360h
+    secretName: internal-ca-keypair
+    commonName: "Internal CA"
+   
+
+internalCertificate:
+  enabled: true
+  name: internal-tls
+  namespace: default
+  secretName: internal-tls-secret
+  dnsName: localhost
+  commonName: localhost
+  duration: 2160h
+  renewBefore: 360h
+

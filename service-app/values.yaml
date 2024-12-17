@@ -62,7 +62,8 @@ ingress:
   className: "nginx"
   namespace: gateway
   annotations: 
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # cert-manager.io/issuer: "internal-ca-issuer"
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     # kubernetes.io/ingress.class: nginx
@@ -81,17 +82,6 @@ ingress:
    - secretName: letsencrypt-tls
      hosts:
        - localhost
-
-# Enable/disable ClusterIssuer
-clusterIssuer:
-  enabled: true
-  name: letsencrypt-prod-gateway
-  acme:
-    server: https://acme-v02.api.letsencrypt.org/directory
-    email: barca105@naver.com
-    privateKeySecretName: letsencrypt-prod
-    ingressClass: nginx
-
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
