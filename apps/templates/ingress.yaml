@@ -38,7 +38,7 @@ spec:
               service:
                 name: {{ include "infra.fullname" $ }}
                 port:
-                  number: {{ $.Values.service.port }}
+                  number: 8080
           {{- end }}
     {{- end }}
 {{- end }}

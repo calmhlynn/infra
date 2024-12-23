@@ -1,0 +1,76 @@
+prometheus:
+  prometheusSpec:
+    remoteWriteDashboards: []
+    additionalServiceMonitors:
+      - name: ingress-nginx
+        selector:
+          matchLabels:
+            app.kubernetes.io/name: ingress-nginx
+            app.kubernetes.io/component: controller
+        namespaceSelector:
+          matchNames:
+            - ingress-nginx
+        endpoints:
+          - port: metrics
+            path: /metrics
+            interval: 15s
+            scheme: http
+
+      - name: gateway-rs
+        selector:
+          matchLabels:
+            app: gateway-rs
+        namespaceSelector:
+          matchNames:
+            - gateway
+        endpoints:
+          - port: http
+            path: /metrics
+            interval: 15s
+            scheme: http
+
+
+grafana:
+  adminPassword: "admin"
+
+  datasources:
+    datasources.yaml:
+      datasources:
+        - name: gateway-rs
+          type: prometheus
+          url: http://localhost:9090
+          access: proxy
+          isDefault: true
+
+# disabled on macOS
+nodeExporter:
+  enabled: false
+  # hostMounts:
+  #   proc:
+  #     path: /host/proc
+  #   sys:
+  #     path: /host/sys
+  # resources:
+  #   requests:
+  #     cpu: 100m
+  #     memory: 128Mi
+  #   limits:
+  #     cpu: 200m
+  #     memory: 256Mi
+
+
+  # only used MacOS.
+  # disabled root mounted
+  # hostRootFs: false
+  # hostNetworks: false
+  # extraArgs:
+  #   - --path.rootfs=
+  #   - --path.udev.data=
+
+serviceApp:
+  enabled: true
+  name: gateway-rs
+  url: https://localhost
+  credentials:
+    username: admin
+    password: admin

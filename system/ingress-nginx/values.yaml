@@ -1,87 +1,9 @@
-# Global settings (필요 시 추가)
-global:
-  # 이미지 풀 시크릿 설정
-  imagePullSecrets:
-    - name: your-registry-secret
-
-# Ingress-NGINX Controller 설정
 controller:
-  replicaCount: 3  # 사용자 설정: replicaCount
+  replicaCount: 3  
 
-  image:
-    repository: barca105/gateway-rs  # 사용자 설정: image.repository
-    pullPolicy: IfNotPresent          # 사용자 설정: image.pullPolicy
-    tag: latest                       # 사용자 설정: image.tag
-
-  service:
-    type: NodePort      # 사용자 설정: service.type
-    port: 8080          # 사용자 설정: service.port
-
-    # 외부 접근을 위한 설정 (필요 시 추가)
-    # annotations:
-    #   service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
-
-  ingressClassResource:
+  metrics:
     enabled: true
-    name: nginx
-    controllerValue: k8s.io/ingress-nginx
-    default: false
-    # annotations: {}  # 사용자 필요에 따라 설정
-
-  serviceAccount:
-    create: true                     # 사용자 설정: serviceAccount.create
-    automountServiceAccountToken: true  # 사용자 설정: serviceAccount.automount
-    annotations: {}                  # 사용자 설정: serviceAccount.annotations
-    name: ""                         # 사용자 설정: serviceAccount.name (필요 시 설정)
-
-  podAnnotations: {}  # 사용자 설정: podAnnotations
-  podLabels: {}       # 사용자 설정: podLabels
-
-  podSecurityContext: {}  # 사용자 설정: podSecurityContext
-  securityContext: {}     # 사용자 설정: securityContext
-
-  resources: {}  # 사용자 설정: resources
-  # 예시:
-  # resources:
-  #   limits:
-  #     cpu: 200m
-  #     memory: 256Mi
-  #   requests:
-  #     cpu: 100m
-  #     memory: 128Mi
-
-  livenessProbe:
-    httpGet:
-      path: /
-      port: http
-    initialDelaySeconds: 10
-    periodSeconds: 10
-    timeoutSeconds: 1
-    successThreshold: 1
-    failureThreshold: 5
-
-  readinessProbe:
-    httpGet:
-      path: /
-      port: http
-    initialDelaySeconds: 10
-    periodSeconds: 10
-    timeoutSeconds: 1
-    successThreshold: 1
-    failureThreshold: 3
-
-  autoscaling:
-    enabled: false  # 사용자 설정: autoscaling.enabled
-    minReplicas: 1   # 사용자 설정: autoscaling.minReplicas
-    maxReplicas: 100 # 사용자 설정: autoscaling.maxReplicas
-    targetCPUUtilizationPercentage: 80  # 사용자 설정: autoscaling.targetCPUUtilizationPercentage
-
-  nodeSelector: {}  # 사용자 설정: nodeSelector
-  tolerations: []    # 사용자 설정: tolerations
-  affinity: {}       # 사용자 설정: affinity
-
-# 기타 전역 설정 (필요 시 추가)
-nameOverride: ""       # 사용자 설정: nameOverride
-fullnameOverride: ""   # 사용자 설정: fullnameOverride
-
-imagePullSecrets: []   # 사용자 설정: imagePullSecrets
+    service:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "10254"

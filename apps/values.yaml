@@ -7,12 +7,18 @@ image:
 
 service:
   type: NodePort
-  port: 8080
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  labels:
+    app: gateway-rs
 
 ingress:
   enabled: true
   className: "nginx"
   namespace: gateway
+  servicePort: 8080
   annotations: 
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
@@ -25,7 +31,7 @@ ingress:
             service:
               name: gateway-rs
               port:
-              number: 8080
+                number: 8080
   tls: 
     - secretName: letsencrypt-tls
       hosts:
@@ -82,3 +88,7 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+containerPorts:
+  - name: http
+    containerPort: 8080
