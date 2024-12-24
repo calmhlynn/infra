@@ -1,33 +1,32 @@
 prometheus:
-  prometheusSpec:
-    remoteWriteDashboards: []
-    additionalServiceMonitors:
-      - name: ingress-nginx
-        selector:
-          matchLabels:
-            app.kubernetes.io/name: ingress-nginx
-            app.kubernetes.io/component: controller
-        namespaceSelector:
-          matchNames:
-            - ingress-nginx
-        endpoints:
-          - port: metrics
-            path: /metrics
-            interval: 15s
-            scheme: http
+  additionalServiceMonitors:
+    - name: ingress-nginx
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: ingress-nginx
+          app.kubernetes.io/component: controller
+      namespaceSelector:
+        matchNames:
+          - ingress-nginx
+      endpoints:
+        - port: metrics
+          path: /metrics
+          interval: 15s
+          scheme: http
 
-      - name: gateway-rs
-        selector:
-          matchLabels:
-            app: gateway-rs
-        namespaceSelector:
-          matchNames:
-            - gateway
-        endpoints:
-          - port: http
-            path: /metrics
-            interval: 15s
-            scheme: http
+    - name: gateway-rs-infra
+      selector:
+        matchLabels:
+          app.kubernetes.io/instance: gateway-rs
+          app.kubernetes.io/name: infra
+      namespaceSelector:
+        matchNames:
+          - gateway
+      endpoints:
+        - port: http
+          path: /metrics
+          interval: 15s
+          scheme: http
 
 
 grafana:
@@ -66,11 +65,3 @@ nodeExporter:
   # extraArgs:
   #   - --path.rootfs=
   #   - --path.udev.data=
-
-serviceApp:
-  enabled: true
-  name: gateway-rs
-  url: https://localhost
-  credentials:
-    username: admin
-    password: admin
