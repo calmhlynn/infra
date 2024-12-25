@@ -2,7 +2,9 @@ replicaCount: 3
 
 image:
   repository: barca105/gateway-rs
-  pullPolicy: IfNotPresent
+  
+  # Always updated image.
+  pullPolicy: Always
   tag: latest
 
 service:
