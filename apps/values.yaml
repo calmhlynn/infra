@@ -35,7 +35,7 @@ ingress:
               port:
                 number: 8080
   tls: 
-    - secretName: letsencrypt-tls
+    - secretName: step-ca-internal-secret
       hosts:
         - localhost
 

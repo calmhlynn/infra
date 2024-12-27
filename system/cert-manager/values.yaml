@@ -1,31 +1,44 @@
+# # Enable/disable ClusterIssuer
+# clusterIssuer:
+#   enabled: false
+#   name: letsencrypt-prod-gateway
+#   acme:
+#     server: https://acme-v02.api.letsencrypt.org/directory
+#     email: barca105@naver.com
+#     privateKeySecretName: letsencrypt-prod
+#     ingressClass: nginx
+
 # Enable/disable ClusterIssuer
 clusterIssuer:
-  enabled: false
-  name: letsencrypt-prod-gateway
+  enabled: true
+  name: step-ca-acme-cluster-issuer
   acme:
-    server: https://acme-v02.api.letsencrypt.org/directory
+    server: http://step-ca-step-certificates.step-ca.svc.cluster.local:9000/acme/acme-provisioner/directory
     email: barca105@naver.com
-    privateKeySecretName: letsencrypt-prod
+    privateKeySecretName: step-ca-acme-account-key
     ingressClass: nginx
 
-internalCaIssuer:
-  enabled: true
-  name: internal-ca-issuer
-  namespace: cert-manager
-  spec:
-    isCA: true
-    duration: 8760h
-    renewBefore: 360h
-    secretName: internal-ca-keypair
-    commonName: "Internal CA"
+# internalCaIssuer:
+#   enabled: true
+#   name: internal-ca-issuer
+#   namespace: cert-manager
+#   spec:
+#     isCA: true
+#     duration: 8760h
+#     renewBefore: 360h
+#     secretName: internal-ca-keypair
+#     commonName: "Internal CA"
    
 
 internalCertificate:
   enabled: true
-  name: internal-tls
+  name: step-ca-internal-cert
   namespace: default
-  secretName: internal-tls-secret
-  dnsName: localhost
+  secretName: step-ca-internal-secret
+  issuerRef:
+    name: step-ca-acme-cluster-issuer
+    kind: ClusterIssuer
+  dnsName: gateway-infra.gateway.svc.cluster.local
   commonName: localhost
   duration: 2160h
   renewBefore: 360h

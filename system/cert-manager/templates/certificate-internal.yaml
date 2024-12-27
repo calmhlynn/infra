@@ -10,8 +10,8 @@ spec:
     - {{ .Values.internalCertificate.dnsName }}
   commonName: {{ .Values.internalCertificate.commonName }}
   issuerRef:
-    name: {{ .Values.internalCaIssuer.name }}
-    kind: ClusterIssuer
+    name: {{ .Values.internalCertificate.issuerRef.name }}
+    kind: {{ .Values.internalCertificate.issuerRef.kind }}
   duration: {{ .Values.internalCertificate.duration }}
   renewBefore: {{ .Values.internalCertificate.renewBefore }}
 {{- end }}
