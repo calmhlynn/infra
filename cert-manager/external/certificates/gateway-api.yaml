@@ -4,7 +4,7 @@ metadata:
   name: gateway-rs
   namespace: gateway
 spec:
-  secretName: app1-tls
+  secretName: gateway-tls
   dnsNames:
     - calmhlynn.com
   issuerRef:
