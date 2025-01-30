@@ -1,70 +1,108 @@
+# Vault Kubernetes HA Setup with Raft and PKI
 
-설정 개요
+## Overview
 
-1. HA 세팅 (replicas raft join) https://developer.hashicorp.com/vault/tutorials/kubernetes/kubernetes-minikube-raft
-2. PKI 세팅 및 TLS 설정 https://developer.hashicorp.com/vault/tutorials/pki/pki-acme-caddy
-  * set root CA
-  * set intermidiate CA
+This guide outlines the setup of a highly available (HA) Vault cluster using Raft for storage, along with PKI and TLS configurations.
 
-----
+### Setup Steps
 
-#### #1 HA 
+1. **HA Configuration (Replicas, Raft Join)**
+   - [Vault Kubernetes Minikube Raft Tutorial](https://developer.hashicorp.com/vault/tutorials/kubernetes/kubernetes-minikube-raft)
+   
+2. **PKI and TLS Configuration**
+   - [Vault PKI ACME with Caddy Tutorial](https://developer.hashicorp.com/vault/tutorials/pki/pki-acme-caddy)
+   - Set up Root CA
+   - Set up Intermediate CA
 
-`operator init`로 root token, unseal key를 발급받는다.    
-`-key-shares`는 raft cluster 내에서 사용된 공유키의 수,  `-key-threshold`는
-unseal하는데 필요한 공유키의 수이다.  프로덕션 레벨에서는 이 설정값을 높인 후
-**Auto-Unseal**을 사용할 것을 권장한다.
+## Installation
+
+Use Helm to install Vault in the `vault` namespace:
+
+```sh
+helm install vault hashicorp/vault \
+  -n vault \
+  --create-namespace \
+  -f prev-values.yaml
 ```
-$ kubectl exec vault-0 -- vault operator init \
-    -key-shares=1 \
-    -key-threshold=1 \
-    -format=json > cluster-keys.json
+Initial Setup
+
+**1. Initialize Vault**
+
+Initialize the Vault cluster and save the keys:
+```sh
+kubectl -n vault exec vault-0 -- vault operator init \
+  -key-shares=1 \
+  -key-threshold=1 \
+  -format=json > cluster-keys.json
 ```
 
-클러스터들이 아직 Unseal되지 않았기 때문에 Running이지만 READY=0/1인 상태
-```zsh
-$ kubectl get -n vault all                                    
+•`-key-shares`: Number of key shares for the Raft cluster.  
+•`-key-threshold`: Number of key shares required to unseal.
+
+  Note: For production, use appropriate settings and enable Auto-Unseal. Store the cluster-keys.json securely as it contains the root token and unseal keys.
+
+**2. Verify Pod Status**
+
+Check the status of Vault pods:
+```sh
+kubectl get -n vault all
+```
+```sh
+Example output:
+
 NAME                                        READY   STATUS    RESTARTS   AGE
 pod/vault-0                                 0/1     Running   0          84s
 pod/vault-1                                 0/1     Running   0          84s
 pod/vault-2                                 0/1     Running   0          84s
 pod/vault-agent-injector-75f9d67594-95j2q   1/1     Running   0          84s
 ```
+Pods are running but not ready (READY=0/1) as the cluster is sealed.
 
-cluster-keys.json에서 찾은 `unseal_key_b64`를 통해 Unseal한다.
+**3. Unseal the Leader Pod**
+
+Unseal vault-0 using the unseal key from cluster-keys.json:
+```sh
+kubectl exec vault-0 -n vault -- vault operator unseal <unseal_key_b64>
 ```
-$ kubectl exec vault-0 -- vault operator unseal {unseal_key_b64}
-Key                     Value
----                     -----
-Seal Type               shamir
-Initialized             true
-Sealed                  false
-Total Shares            1
-Threshold               1
-Version                 1.18.1
-Build Date              2024-10-29T14:21:31Z
-Storage Type            raft
-Cluster Name            vault-cluster-c154acd8
-Cluster ID              44fccd80-98ff-fc72-73dc-dbe8d3492841
-HA Enabled              true
-HA Cluster              https://vault-0.vault-internal:8201
-HA Mode                 active
-Active Since            2025-01-26T03:54:32.088776927Z
-Raft Committed Index    56
-Raft Applied Index      56
+Example output:
+```sh
+Key                Value
+---                -----
+Seal Type          shamir
+Initialized        true
+Sealed             false
+Total Shares       1
+Threshold          1
+Version            1.18.1
+Build Date         2024-10-29T14:21:31Z
+Storage Type       raft
+Cluster Name       vault-cluster-c154acd8
+Cluster ID         44fccd80-98ff-fc72-73dc-dbe8d3492841
+HA Enabled         true
+HA Cluster         https://vault-0.vault-internal:8201
+HA Mode            active
+Active Since       2025-01-26T03:54:32.088776927Z
+Raft Committed Index 56
+Raft Applied Index   56
 ```
+**4. Join and Unseal Follower Pods**
 
-
-`vault-1`를 조인 후,  Unseal한다.    
-조인을 하지 않고 Unseal을 시도하면 에러가 발생
+Join vault-1 to the cluster and unseal it:
+```sh
+kubectl -n vault exec -ti vault-1 -- vault operator raft join http://vault-0.vault-internal:8200
 ```
-$ kubectl -n vault exec -ti vault-1 -- \ 
-    vault operator raft join http://vault-0.vault-internal:8200
-Key       Value
----       -----
-Joined    true
+Output:
+```sh
+Key     Value
+---     -----
+Joined  true
 
-$ k exec -n vault vault-1 -- vault operator unseal {unseal_key_b64}
+Unseal vault-1:
+
+kubectl exec -n vault vault-1 -- vault operator unseal <unseal_key_b64>
+
+Example output:
+
 Key                Value
 ---                -----
 Seal Type          shamir
@@ -79,101 +117,55 @@ Build Date         2024-10-29T14:21:31Z
 Storage Type       raft
 HA Enabled         true
 ```
+**5. Verify All Pods are Ready**
 
-마찬가지로 `vault-2`도 위와같이 적용한다.
-
+After joining and unsealing all pods, verify their status:
+```sh
+kubectl get -n vault pods
 ```
-$ kubectl get -n vault pod
+Example output:
+```sh
 NAME                                    READY   STATUS    RESTARTS   AGE
 vault-0                                 1/1     Running   0          6m39s
 vault-1                                 1/1     Running   0          6m39s
 vault-2                                 1/1     Running   0          6m39s
 vault-agent-injector-75f9d67594-k7dhn   1/1     Running   0          6m39s
 ```
+All pods should show READY=1/1.
 
-마지막으로 cluster-keys.json의 root_token을 통해 로그인한다. 
-```
-$ kubectl exec -n vault --stdin=true --tty=true vault-0 -- \      
-       vault login
-```
+**6. Login to Vault**
 
-앞서 말한대로 프로덕션 레벨에서는 **Auto-Unseal**을 사용하는 것을 권장한다.
+Use the root token from cluster-keys.json to log in:
+```sh
+kubectl exec -n vault --stdin=true --tty=true vault-0 -- vault login <root_token>
+```
+Note: For production, Auto-Unseal is recommended.
+
+PKI Configuration
+
+Scripts
+* Generate PKI: `generate_pki.sh`
+* Setup Injector: `setup_vault_injector.sh`
+
+Important: Modify the variables and data within each script as needed.
 
 ----
 
-#### #2 Vault PKI
 
-##### #2-1 Create Root CA
-Root CA 생성
-```
-$ kubectl exec -n vault --stdin=true --tty=true vault-0 -- \
-        vault secrets enable pki
-Success! Enabled the pki secrets engine at: pki/
-```
+#### Issue TLS certificates for Vault using cert-manager.
 
-인증서의 만료일 설정
+After Configure PKI, deploy a `ClusterIssuer` in cert-manager and a `Certificate` in vault to enable TLS.
+
 ```
-$ kubectl exec -n vault --stdin=true --tty=true vault-0 -- \
-        vault secrets tune -max-lease-ttl=87600h pki
-Success! Tuned the secrets engine at: pki/
+kubectl apply -f ../cert-manager/internal/cluster-issuer/vault_cluster_issuer.yaml
+kubectl apply -f templates/certificate.yaml
 ```
 
-Root CA, 발급자 이름을 지정 후 `.crt`파일에 저장 
-```
-$ kubectl exec -n vault --stdin=true --tty=true vault-0 -- \
-      vault write -field=certificate pki/root/generate/internal \
-      common_name="calmhlynn.com" \
-      issuer_name="calm-root" \
-      ttl=87600h > calm_root_ca.crt
-```
-
-Root CA 발급자 확인,  Root CA 발급자에 대한 메타데이터 확인
-```
-$ kubectl exec -n vault --stdin=true --tty=true vault-0 -- \ 
-    vault list pki/issuers/
-Keys
 ----
-09c2c9a0-a874-36d2-de85-d79a7a51e373
 
-$ kubectl exec -n vault --stdin=true --tty=true vault-0 -- \
-    vault read pki/issuer/$(vault list -format=json pki/issuers/ | jq -r '.[]') \
-    tail -n 6
-```
+### Redeploy Vault with the updated values.yaml
 
-Root CA에 대한 역할 생성
 ```
-$ kubectl exec -n vault --stdin=true --tty=true vault-0 -- \      
-∙       vault write pki/roles/calm-root-servers allow_any_name=true
+helm upgrade -n vault vault hashicorp/vault \
+    -f values.yaml
 ```
-
-CA, CRL URLs 생성
-```
-$ kubectl exec -n vault --stdin=true --tty=true vault-0 -- \
-        vault write pki/config/urls \
-        issuing_certificates="https://vault.vault.svc.cluster.local:8200/v1/pki/ca" \
-        crl_distribution_points="https://vault.vault.svc.cluster.local:8200/v1/pki/crl"
-```
-
-##### #2-2 Create Intermidate CA
-
-PKI Intermidate 엔진 활성화
-```
-$ kubectl exec -n vault --stdin=true --tty=true vault-0 -- \
-        vault secrets enable -path=pki_int pki
-```
-
-만료일 설정
-```
-$ kubectl exec -n vault --stdin=true --tty=true vault-0 -- \
-       vault secrets tune -max-lease-ttl=43800h pki_int
-```
-
-PKI int 생성 후 `.csr`로 저장
-```
-$ kubectl exec -n vault --stdin=true --tty=true vault-0 -- \       
-    vault write -format=json pki_int/intermediate/generate/internal \
-        common_name="calmhlynn.com Intermediate Authority" \
-        issuer_name="calmhlynn-dot-com-intermediate" \
-        | jq -r '.data.csr' > pki_intermediate.csr
-```
-

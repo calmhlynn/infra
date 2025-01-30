@@ -2,8 +2,16 @@ global:
   enabled: true
 
 server:
-
   affinity: ""
+
+  volumes:
+    - name: tls
+      # secret:
+      #   secretName: vault-tls
+  volumeMounts:
+    - name: tls
+      mountPath: /vault/userconfig/tls
+      readOnly: true
 
   ha:
     enabled: true
