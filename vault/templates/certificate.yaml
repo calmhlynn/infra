@@ -4,9 +4,9 @@ metadata:
   name: vault-tls
   namespace: vault
 spec:
-  secretName: vault-tls
+  secretName: vault-tls-final
   dnsNames:
-    - vault.calmhlynn.com
+    - vault.vault.svc.cluster.local
   issuerRef:
-    name: letsencrypt-prod-dns01
+    name: vault-cluster-issuer
     kind: ClusterIssuer

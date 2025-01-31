@@ -4,6 +4,30 @@
 
 This guide outlines the setup of a highly available (HA) Vault cluster using Raft for storage, along with PKI and TLS configurations.
 
+
+#### Prerequisite
+
+Generate a temporary SSL certificate. If configuring replicas, you should add a
+DNS configuration.
+
+```sh
+openssl req -x509 -newkey rsa:4096 -days 365 -nodes \
+  -keyout tls.key -out tls.crt \
+  -subj "/CN=vault.vault.svc.cluster.local" \
+  -addext "subjectAltName=DNS:vault.vault.svc.cluster.local, \
+                           DNS:vault-0.vault-internal, \
+                           DNS:vault-1.vault-internal, \
+                           DNS:vault-2.vault-internal, \
+                           IP:127.0.0.1"
+```
+
+```sh
+kubectl create secret generic vault-tls-tmp -n vault \    
+  --from-file=tls.crt=vault.crt \
+  --from-file=tls.key=vault.key
+```
+
+
 ### Setup Steps
 
 1. **HA Configuration (Replicas, Raft Join)**
@@ -89,7 +113,13 @@ Raft Applied Index   56
 
 Join vault-1 to the cluster and unseal it:
 ```sh
-kubectl -n vault exec -ti vault-1 -- vault operator raft join http://vault-0.vault-internal:8200
+kubectl -n vault exec -ti vault-1 -- /bin/sh
+
+vault operator raft join -address=https://vault-1.vault-internal:8200 \
+  -leader-ca-cert="$(cat /vault/userconfig/tls/vault.crt)" \
+  -leader-client-cert="$(cat /vault/userconfig/tls/vault.crt)" \
+  -leader-client-key="$(cat /vault/userconfig/tls/vault.key)" \
+  https://vault-0.vault-internal:8200
 ```
 Output:
 ```sh
@@ -117,6 +147,18 @@ Build Date         2024-10-29T14:21:31Z
 Storage Type       raft
 HA Enabled         true
 ```
+
+Join vault-2 to the cluster and unseal it:
+```sh
+kubectl -n vault exec -ti vault-2 -- /bin/sh
+
+vault operator raft join -address=https://vault-2.vault-internal:8200 \
+  -leader-ca-cert="$(cat /vault/userconfig/tls/vault.crt)" \
+  -leader-client-cert="$(cat /vault/userconfig/tls/vault.crt)" \
+  -leader-client-key="$(cat /vault/userconfig/tls/vault.key)" \
+  https://vault-0.vault-internal:8200
+```
+
 **5. Verify All Pods are Ready**
 
 After joining and unsealing all pods, verify their status:
