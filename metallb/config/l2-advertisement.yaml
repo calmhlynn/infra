@@ -3,5 +3,7 @@ kind: L2Advertisement
 metadata:
   name: default-advertisement
   namespace: metallb-system
-spec: {}
+spec:
+  ipAddressPools:
+  - config-pool
 
